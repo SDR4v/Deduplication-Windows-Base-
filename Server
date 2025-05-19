@@ -1,0 +1,46 @@
+import java.io.*;
+import java.net.*;
+import java.nio.file.*;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
+
+public class Server {
+    public static void run(String folderPath) {
+        try (ServerSocket serverSocket = new ServerSocket(5000)) {
+            System.out.println("🟢 Server started. Listening on port 5000...");
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("🔗 New client connected: " + clientSocket.getInetAddress());
+
+                // Handle client in a new thread
+                new Thread(() -> handleClient(clientSocket, folderPath)).start();
+            }
+
+        } catch (IOException e) {
+            System.err.println("❌ Server error: " + e.getMessage());
+        }
+    }
+
+    private static void handleClient(Socket clientSocket, String folderPath) {
+        try (
+            ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())
+        ) {
+            Path serverFolder = Paths.get(folderPath);
+            Map<String, String> serverHashes = FileUtils.scanFolder(serverFolder);
+
+            out.writeObject(serverHashes);
+            out.flush();
+            System.out.println("📤 Sent hash data to client: " + clientSocket.getInetAddress());
+
+        } catch (IOException | NoSuchAlgorithmException e) {
+            System.err.println("❌ Error with client " + clientSocket.getInetAddress() + ": " + e.getMessage());
+        } finally {
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                System.err.println("❌ Error closing client socket: " + e.getMessage());
+            }
+        }
+    }
+}
