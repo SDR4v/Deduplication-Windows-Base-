@@ -1,0 +1,49 @@
+Try AI directly in your favourite apps … Use Gemini to generate drafts and refine content, plus get Gemini Advanced with access to Google's next-gen AI for ₱1,100.00 ₱0 for 1 month
+import java.io.*;
+import java.net.Socket;
+import java.nio.file.*;
+import java.security.NoSuchAlgorithmException;
+import java.util.Map;
+
+public class Client {
+    public static void run(String serverIP, String clientFolderPath) {
+        try (
+            Socket socket = new Socket(serverIP, 5000);
+            ObjectInputStream in = new ObjectInputStream(socket.getInputStream())
+        ) {
+            @SuppressWarnings("unchecked")
+            Map<String, String> serverHashes = (Map<String, String>) in.readObject();
+
+            Path clientFolder = Paths.get(clientFolderPath);
+            Map<String, String> clientHashes = FileUtils.scanFolder(clientFolder);
+
+            for (Map.Entry<String, String> entry : clientHashes.entrySet()) {
+                String clientPath = entry.getKey();
+                String clientHash = entry.getValue();
+                String clientFileName = Paths.get(clientPath).getFileName().toString();
+
+                boolean isDuplicate = serverHashes.entrySet().stream().anyMatch(serverEntry -> {
+                    String serverFileName = Paths.get(serverEntry.getKey()).getFileName().toString();
+                    String serverHash = serverEntry.getValue();
+                    return serverFileName.equals(clientFileName) && serverHash.equals(clientHash);
+                });
+
+                if (isDuplicate) {
+                    try {
+                        Files.deleteIfExists(Paths.get(clientPath));
+                        System.out.println("\uD83D\uDDD1️ Deleted duplicate: " + clientPath);
+                    } catch (IOException e) {
+                        System.err.println("⚠️ Failed to delete: " + clientPath + " — " + e.getMessage());
+                    }
+                } else {
+                    System.out.println("✅ Unique file (kept): " + clientPath);
+                }
+            }
+
+            System.out.println("✅ Client session complete. Duplicate files removed if found.");
+        } catch (IOException | ClassNotFoundException | NoSuchAlgorithmException e) {
+            System.err.println("❌ Client error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
