@@ -1,0 +1,132 @@
+Try AI directly in your favourite apps … Use Gemini to generate drafts and refine content, plus get Gemini Advanced with access to Google's next-gen AI for ₱1,100.00 ₱0 for 1 month
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+
+public class DeDuplicationApp {
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Distributed De-Duplication App");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setSize(600, 400);
+            frame.setLayout(new BorderLayout(10, 10));
+
+            JPanel mainPanel = new JPanel(new CardLayout());
+            frame.add(mainPanel, BorderLayout.CENTER);
+
+            // MODE SELECTION PANEL
+            JPanel modePanel = new JPanel(new GridLayout(2, 1, 10, 10));
+            JButton serverModeButton = new JButton("Server Mode");
+            JButton clientModeButton = new JButton("Client Mode");
+
+            modePanel.add(serverModeButton);
+            modePanel.add(clientModeButton);
+            mainPanel.add(modePanel, "ModePanel");
+
+            // SERVER PANEL
+            JPanel serverPanel = new JPanel(new BorderLayout(10, 10));
+            JTextField serverFolderField = new JTextField();
+            JButton serverBrowseButton = new JButton("Browse Server Folder");
+            JButton serverStartButton = new JButton("Start Server");
+
+            JPanel serverFolderPanel = new JPanel(new BorderLayout());
+            serverFolderPanel.add(serverFolderField, BorderLayout.CENTER);
+            serverFolderPanel.add(serverBrowseButton, BorderLayout.EAST);
+
+            serverPanel.add(serverFolderPanel, BorderLayout.NORTH);
+            serverPanel.add(serverStartButton, BorderLayout.SOUTH);
+            mainPanel.add(serverPanel, "ServerPanel");
+
+            // CLIENT PANEL
+            JPanel clientPanel = new JPanel(new GridLayout(4, 1, 10, 10));
+            JTextField clientFolderField = new JTextField();
+            JButton clientBrowseButton = new JButton("Browse Client Folder");
+            JTextField serverIPField = new JTextField("127.0.0.1");
+            JButton clientStartButton = new JButton("Start Client");
+
+            JPanel clientFolderPanel = new JPanel(new BorderLayout());
+            clientFolderPanel.add(clientFolderField, BorderLayout.CENTER);
+            clientFolderPanel.add(clientBrowseButton, BorderLayout.EAST);
+
+            JPanel ipPanel = new JPanel(new BorderLayout());
+            ipPanel.add(new JLabel("Server IP: "), BorderLayout.WEST);
+            ipPanel.add(serverIPField, BorderLayout.CENTER);
+
+            clientPanel.add(clientFolderPanel);
+            clientPanel.add(ipPanel);
+            clientPanel.add(new JLabel()); // spacer
+            clientPanel.add(clientStartButton);
+            mainPanel.add(clientPanel, "ClientPanel");
+
+            CardLayout cl = (CardLayout) mainPanel.getLayout();
+
+            // Mode selection actions
+            serverModeButton.addActionListener(e -> cl.show(mainPanel, "ServerPanel"));
+            clientModeButton.addActionListener(e -> cl.show(mainPanel, "ClientPanel"));
+
+            // Browse buttons
+            serverBrowseButton.addActionListener(e -> {
+                JFileChooser chooser = new JFileChooser();
+                chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                    serverFolderField.setText(chooser.getSelectedFile().getAbsolutePath());
+                }
+            });
+
+            clientBrowseButton.addActionListener(e -> {
+                JFileChooser chooser = new JFileChooser();
+                chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                    clientFolderField.setText(chooser.getSelectedFile().getAbsolutePath());
+                }
+            });
+
+            // Start Server
+            serverStartButton.addActionListener(e -> {
+                String folderPath = serverFolderField.getText().trim();
+                if (folderPath.isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Please select a server folder.");
+                    return;
+                }
+
+                new Thread(() -> {
+                    try {
+                        Server.run(folderPath);
+                        JOptionPane.showMessageDialog(frame, "Server session complete.");
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(frame, "Server error: " + ex.getMessage());
+                    }
+                }).start();
+            });
+
+            // Start Client
+            clientStartButton.addActionListener(e -> {
+                String folderPath = clientFolderField.getText().trim();
+                String serverIP = serverIPField.getText().trim();
+
+                if (folderPath.isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Please select a client folder.");
+                    return;
+                }
+
+                if (serverIP.isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Please enter the server IP.");
+                    return;
+                }
+
+                new Thread(() -> {
+                    try {
+                        Client.run(serverIP, folderPath);
+                        JOptionPane.showMessageDialog(frame, "Client session complete. Duplicate files removed.");
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(frame, "Client error: " + ex.getMessage());
+                    }
+                }).start();
+            });
+
+            frame.setVisible(true);
+        });
+    }
+}
